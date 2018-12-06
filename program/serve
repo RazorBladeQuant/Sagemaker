@@ -1,0 +1,122 @@
+import pandas as pd
+import numpy as np
+import datetime
+from keras.models import load_model
+import boto3
+
+def import_model_predict():
+
+    client_s3 = boto3.resource("s3")
+
+    client_s3.Bucket('plt-ukgas-dev-use1-hubbalance-s3').download_file('Interconnector_Model/Process_Data/InterConnectors_ProcessedData.json','InterConnectors_ProcessedData.json')
+    config=pd.read_json('InterConnectors_ProcessedData.json')
+
+    Bucket=config['Bucket'].iloc[0]
+    dependant=config['FlowItem'].iloc[0]
+    Model_path=config['ModelPath'].iloc[0]
+    ForecastFileName=config['ForecastFileName'].iloc[0]
+    ForecastFilePath=config['ForecastFilePath'].iloc[0]
+    MaintenanceFile=config['MaintenanceFile'].iloc[0]
+    OutputFilePath=config['OutputPath'].iloc[0]
+    MaintenanceFileName=config['MaintenanceFileName'].iloc[0]
+
+
+    client_s3 = boto3.client("s3")
+    client_s3.download_file(str(Bucket),Model_path + '{}.tar.gz'.format(dependant),"/tmp/{}.tar.gz".format(dependant))
+    model = load_model('/tmp/{}.tar.gz'.format(dependant))
+
+    client_s3 = boto3.resource("s3")
+
+    client_s3.Bucket(Bucket).download_file(MaintenanceFile,MaintenanceFileName)
+    maintenance=pd.read_csv(MaintenanceFileName)
+
+    forecast = ForecastFilePath+ForecastFileName
+
+    client_s3.Bucket(Bucket).download_file(forecast,ForecastFileName)
+    forecast=pd.read_csv(ForecastFileName)
+
+    forecast=forecast.head(15)
+
+    gas_day=pd.DataFrame()
+    gas_day['gas_day']=forecast['gas_day']
+
+    del forecast['gas_day']
+
+    selected_features='{}{} selected features.csv'.format(Model_path,dependant)
+    client_s3.Bucket(Bucket).download_file(selected_features,'{} selected features.csv'.format(dependant))
+    model_input_column_names=pd.read_csv('{} selected features.csv'.format(dependant))
+
+    model_input_column_names=pd.Series(model_input_column_names['column_name'])
+
+    X=forecast[forecast.columns.intersection(model_input_column_names)]
+
+    Forecast_Timestamp=datetime.datetime.now()
+    Forecast_prelim=pd.DataFrame(model.predict(X),columns=['forecast_mcm'])
+    Forecast_prelim['gas_day']=gas_day['gas_day']
+    Forecast_prelim['item_id']=dependant
+    Forecast_prelim=Forecast_prelim.set_index(Forecast_prelim['gas_day'])
+
+    Forecast=pd.DataFrame()
+    for x in Forecast_prelim.gas_day:
+        a=maintenance.loc[(maintenance['gas_day'] == x ) & (maintenance['id_flow_item'] == Forecast_prelim['item_id'].loc[x])]
+        a['forecast_mcm']=float(Forecast_prelim['forecast_mcm'].iloc[0])
+        a['flow_id']=dependant
+        if a.empty:
+            a=pd.DataFrame()
+            a['forecast_mcm']=Forecast_prelim['forecast_mcm'].loc[[x]]
+            a['flow_id']=Forecast_prelim['item_id'].loc[x]
+            a['outage_volume']= np.nan
+
+        Forecast=Forecast.append(a)
+    Forecast=Forecast.reset_index()
+
+    Forecast['outage_volume']=Forecast['outage_volume'].fillna(10000)
+    Forecast['positive']=(pd.DataFrame(Forecast['forecast_mcm'] )> 0).all(1)
+    Forecast['absolute_forecast_mcm']=np.abs(Forecast['forecast_mcm'])
+    Forecast['absolute_forecast_maintenance_adjusted']=Forecast[['absolute_forecast_mcm','outage_volume']].min(axis=1)
+
+    Forecast=Forecast[['outage_volume','absolute_forecast_maintenance_adjusted','positive','gas_day']]
+    Forecast=Forecast.reset_index()
+    Forecast_post_maintenance=pd.DataFrame()
+    for x in Forecast['index']:
+        a=Forecast.loc[[x]]
+        a['absolute_forecast_maintenance_adjusted'].iloc[0]
+        if a['absolute_forecast_maintenance_adjusted'].iloc[0]==a['outage_volume'].iloc[0]:
+            a['Maintenance']=1
+        else:
+            a['Maintenance']=0
+
+        Forecast_post_maintenance=Forecast_post_maintenance.append(a)
+
+    for x in Forecast_post_maintenance['positive']:
+        if x==bool(False):
+            Forecast_post_maintenance['final_forecast']=Forecast_post_maintenance['absolute_forecast_maintenance_adjusted']*-1
+        else:
+            Forecast_post_maintenance['final_forecast']=Forecast_post_maintenance['absolute_forecast_maintenance_adjusted']*+1
+
+
+    Forecast_SQL=pd.DataFrame()
+    Forecast_SQL['forecast']=Forecast_post_maintenance['final_forecast']
+    Forecast_SQL['forecast_timestamp']=Forecast_Timestamp
+
+    Forecast_SQL['gas_day']=Forecast_post_maintenance['gas_day']
+    Forecast_SQL['item_id']=dependant
+    Forecast_SQL['Model_id']='01010010'
+    Forecast_SQL['Maintenance']=Forecast_post_maintenance['Maintenance']
+
+    forecast[dependant]=Forecast_SQL['forecast']
+    forecast['gas_day']=gas_day['gas_day']
+
+    forecast.to_csv('{}'.format(ForecastFileName))
+    boto3.Session().resource('s3').Bucket(str(Bucket)).Object(ForecastFilePath+'{}'.format(ForecastFileName)).upload_file('{}'.format(ForecastFileName))
+
+    Forecast_SQL=Forecast_SQL.reset_index()
+    Forecast_SQL['index']='d'+Forecast_SQL['index'].astype(str)
+    Forecast_SQL=Forecast_SQL.set_index('index')
+    Forecast_SQL.to_json('{}.json'.format(dependant))
+    boto3.Session().resource('s3').Bucket(str(Bucket)).Object(OutputFilePath+'{}.json'.format(dependant)).upload_file('{}.json'.format(dependant))
+
+
+if __name__=='__main__':
+
+    import_model_predict()
