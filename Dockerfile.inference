@@ -125,4 +125,5 @@ WORKDIR /root
 #    rm $framework_support_installable_local
 COPY /program /opt/ml/code
 WORKDIR /opt/ml/code
+
 ENTRYPOINT ["python", "serve"]
