@@ -48,7 +48,12 @@ RUN pip --no-cache-dir install \
         sklearn \
         pandas \
         Pillow \
-        h5py
+        h5py\
+        datetime\
+        keras\
+        boto3\
+        botocore
+        
 
 # Set up grpc
 RUN pip install enum34 futures mock six && \
