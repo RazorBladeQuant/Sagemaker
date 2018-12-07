@@ -71,8 +71,9 @@ RUN framework_installable_local=$(basename $framework_installable) && \
     \
     pip install --no-cache --upgrade $framework_installable_local && \
     pip install $framework_support_installable_local && \
-    pip install "sagemaker-tensorflow>=1.9,<1.10" &&\
-    \
+    pip install sagemaker-containers && \
+#    pip install "sagemaker-tensorflow>=1.9,<1.10" &&\
+#    \
     rm $framework_installable_local && \
     rm $framework_support_installable_local
 
