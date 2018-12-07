@@ -143,6 +143,8 @@ RUN framework_installable_local=$(basename $framework_installable) && \
 #    \
     rm $framework_installable_local && \
     rm $framework_support_installable_local
+bash
+pip install sagemaker-containers
 
 # entry.py comes from sagemaker-container-support
 
