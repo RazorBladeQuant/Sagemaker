@@ -48,7 +48,12 @@ RUN pip --no-cache-dir install \
         sklearn \
         pandas \
         Pillow \
-        h5py
+        h5py \
+        datetime\
+        boto3 \
+        botocore \
+        keras \
+        
 
 # Set up grpc
 RUN pip install enum34 futures mock six && \
@@ -126,10 +131,10 @@ RUN rm -rf /serving && \
 WORKDIR /root
 
 # Will install from pypi once packages are released there. For now, copy from local file system.
-COPY $framework_installable .
-COPY $framework_support_installable .
+#COPY $framework_installable .
+#COPY $framework_support_installable .
 
-RUN pip install "sagemaker-tensorflow>=1.10,<1.11"
+RUN pip install sagemaker-tensorflow
 
 #RUN framework_installable_local=$(basename $framework_installable) && \
 #    framework_support_installable_local=$(basename $framework_support_installable) && \
