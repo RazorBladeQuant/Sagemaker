@@ -62,3 +62,4 @@ COPY /program /opt/ml/code
 WORKDIR /opt/ml/code
 
 ENTRYPOINT ["python", "serve"]
+
