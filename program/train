@@ -7,8 +7,7 @@ import pandas as pd
 from sklearn.feature_selection import mutual_info_classif
 import boto3
 import botocore
-import warnings
-warnings.filterwarnings("ignore", category=DeprecationWarning)
+
 import tensorflow as tf
 print(tf.test.is_gpu_available())
 
@@ -60,6 +59,10 @@ def data_process(train_X,dependant,train_Y):
     return scaled_training_X, scaled_testing_X, scaled_training_Y, scaled_testing_Y, input_dim,scalerY,dependant
 
 def feature_selection(raw_data,historical,dependant):
+    
+    import warnings
+    warnings.filterwarnings("ignore", category=DeprecationWarning)
+    
     data=raw_data
     dependant=dependant
     historical=historical
