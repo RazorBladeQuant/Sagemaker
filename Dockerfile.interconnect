@@ -52,12 +52,12 @@ RUN pip --no-cache-dir install \
         datetime\
         boto3 \
         botocore \
-        keras \
+        keras 
         
 
 # Set up grpc
 RUN pip install enum34 futures mock six && \
-    pip install --pre 'protobuf>=3.0.0a3' && \
+    pip install --pre 'protobuf>=3.0.0a3'
     pip install -i https://testpypi.python.org/simple --pre grpcio
 
 # Set up Bazel.
