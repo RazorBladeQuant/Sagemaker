@@ -1,48 +1,6 @@
 FROM tensorflow/serving:1.11.0-gpu as tensorflow_serving_image
 FROM nvidia/cuda:9.0-base-ubuntu16.04
 
-# packaging dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-        dh-make \
-        fakeroot \
-        build-essential \
-        devscripts \
-        lsb-release && \
-    rm -rf /var/lib/apt/lists/*
-
-# packaging
-ARG PKG_VERS
-ARG PKG_REV
-ARG RUNTIME_VERSION
-ARG DOCKER_VERSION
-
-ENV DEBFULLNAME "NVIDIA CORPORATION"
-ENV DEBEMAIL "cudatools@nvidia.com"
-ENV REVISION "$PKG_VERS-$PKG_REV"
-ENV RUNTIME_VERSION $RUNTIME_VERSION
-ENV DOCKER_VERSION $DOCKER_VERSION
-ENV SECTION ""
-
-# output directory
-ENV DIST_DIR=/tmp/nvidia-docker2-$PKG_VERS
-RUN mkdir -p $DIST_DIR
-
-# nvidia-docker 2.0
-COPY nvidia-docker $DIST_DIR/nvidia-docker
-COPY daemon.json $DIST_DIR/daemon.json
-
-WORKDIR $DIST_DIR
-COPY debian ./debian
-
-
-RUN sed -i "s;@VERSION@;${REVISION#*+};" debian/changelog && \
-    if [ "$REVISION" != "$(dpkg-parsechangelog --show-field=Version)" ]; then exit 1; fi
-
-CMD export DISTRIB="$(lsb_release -cs)" && \
-    debuild --preserve-env --dpkg-buildpackage-hook='sh debian/prepare' -i -us -uc -b && \
-    mv /tmp/*.deb /dist
-
-
 LABEL maintainer="Amazon AI"
 LABEL com.amazonaws.sagemaker.capabilities.accept-bind-to-port=true
 
@@ -113,9 +71,6 @@ COPY --from=tensorflow_serving_image /usr/bin/tensorflow_model_server /usr/bin/t
 COPY $framework_installable .
 COPY $framework_support_installable .
 
-RUN pip --no-cache-dir install \
-    http://storage.googleapis.com/tensorflow/linux/gpu/tensorflow_gpu-0.0.0-cp27-none-linux_x86_64.whl
-    
 RUN pip install -U --no-cache-dir \
     numpy \
     scipy \
@@ -134,7 +89,6 @@ RUN pip install -U --no-cache-dir \
     pip uninstall -y --no-cache-dir \ 
     markdown \
     tensorboard
-
 
 COPY /program /opt/ml/code
 WORKDIR /opt/ml/code
