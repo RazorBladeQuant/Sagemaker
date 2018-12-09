@@ -11,7 +11,7 @@ import botocore
 import tensorflow as tf
 print(tf.test.is_gpu_available())
 
-
+print('Package Loading Complete')
 s3_client=boto3.client('s3')
 
 def data_process(train_X,dependant,train_Y):
@@ -55,6 +55,7 @@ def data_process(train_X,dependant,train_Y):
     scaled_testing_Y = pd.DataFrame(scaled_testing_Y, columns=test_Y.columns.values)
 
     input_dim=len(scaled_training_X.columns)
+    print('Data Preprocessing Complete')
 
     return scaled_training_X, scaled_testing_X, scaled_training_Y, scaled_testing_Y, input_dim,scalerY,dependant
 
@@ -111,6 +112,7 @@ def feature_selection(raw_data,historical,dependant):
     Feature_selection=Feature_selection[Feature_selection.column_name != dependant]
     Feature_selected=Feature_selection['column_name'].head(120)
 
+    print('Feature Selection Complete')
 
 
     return Feature_selected
