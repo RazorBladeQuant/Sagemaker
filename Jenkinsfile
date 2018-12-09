@@ -16,9 +16,7 @@ pipeline {
                     sh "docker tag interconnector ${ecr}interconnector:${env.BUILD_ID}"
                     sh "docker tag interconnector ${ecr}interconnector:latest"
 
-                    #sh "docker build -t inference -f Dockerfile.inference ."
-                    #sh "docker tag inference ${ecr}inference:${env.BUILD_ID}"
-                    #sh "docker tag inference ${ecr}inference:latest"
+
             }
         }
         stage('Docker Push') {
@@ -31,8 +29,6 @@ pipeline {
                 sh "docker push ${ecr}interconnector:${env.BUILD_ID}"
                 sh "docker push ${ecr}interconnector:latest"
 
-                #sh "docker push ${ecr}inference:${env.BUILD_ID}"
-                #sh "docker push ${ecr}inference:latest"
             }
         }
     }
