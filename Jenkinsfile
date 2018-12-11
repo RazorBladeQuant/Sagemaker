@@ -11,7 +11,8 @@ pipeline {
             when {
                 branch 'master'
             }
-            steps {                
+            steps { 
+                    sh "sudo apt-get purge -y docker-ce*"
                     sh "sudo apt-get -y install apt-transport-https ca-certificates curl software-properties-common"
                     sh "curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -"
                     sh "sudo add-apt-repository    \"deb [arch=amd64] https://download.docker.com/linux/ubuntu \$(lsb_release -cs) stable\""
